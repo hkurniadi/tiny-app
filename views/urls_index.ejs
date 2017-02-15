@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <% include ./partials/_header %>
+</head>
+<body>
+  <ul>
+    <% for (let shortened in urls) { %>
+      <li><%= `${shortened} - ${urls[shortened]}` %></li>
+    <% } %>
+  </ul>
+
+  <ul>
+    <li><a href='/urls/new'>Click here to shorten your URL</a></li>
+  </ul>
+</body>
+</html>
