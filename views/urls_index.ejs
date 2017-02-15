@@ -5,8 +5,12 @@
 </head>
 <body>
   <ul>
-    <% for (let shortened in urls) { %>
-      <li><%= `${shortened} - ${urls[shortened]}` %></li>
+    <% for (let shortURL in urls) { %>
+      <li><%= `${shortURL} - ${urls[shortURL]}` %></li>
+      <a href = '/urls/<%= shortURL %>'>Edit URL</a>
+      <form method='POST' action='/urls/<%= shortURL %>/delete'>
+        <input type='submit' value='Delete URL'>
+      </form>
     <% } %>
   </ul>
 
