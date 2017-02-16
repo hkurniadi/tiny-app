@@ -12,16 +12,6 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(morgan('dev'));
 app.set('view engine', 'ejs');
 
-function generateRandomString() {
-  var alphaNum = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  var randomStr = '';
-  for (var i = 0; i < 6; i++) {
-    var index = Math.floor(Math.random() * alphaNum.length);
-    randomStr += alphaNum[index];
-  }
-  return randomStr;
-}
-
 //DATABASES
 //=========
 
@@ -47,6 +37,17 @@ const usersDatabase = {
 
 //FUNCTION DEFINITIONS
 //=====================
+
+function generateRandomString() {
+  var alphaNum = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  var randomStr = '';
+  for (var i = 0; i < 6; i++) {
+    var index = Math.floor(Math.random() * alphaNum.length);
+    randomStr += alphaNum[index];
+  }
+  return randomStr;
+}
+
 //To create the next random user id in database
 function nextUserId() {
   let userId = 'user';
