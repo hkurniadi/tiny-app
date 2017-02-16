@@ -7,7 +7,9 @@
   <ul>
     <% for (let shortURL in urls) { %>
       <li><%= `${shortURL} - ${urls[shortURL]}` %></li>
-      <a href = '/urls/<%= shortURL %>'>Edit URL</a>
+      <form method='GET' action='/urls/<%= shortURL %>'>
+        <a href = '/urls/<%= shortURL %>'>Edit URL</a>
+      </form>
       <form method='POST' action='/urls/<%= shortURL %>/delete'>
         <input type='submit' value='Delete URL'>
       </form>
