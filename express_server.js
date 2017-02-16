@@ -1,12 +1,14 @@
 const express = require("express");
 const app = express();
+const cookieParser = require('cookie-parser');
 const bodyParser = require("body-parser");
 const morgan = require('morgan');
 const PORT = process.env.PORT || 8080; // default port 8080
 
+//Middlewares
+app.use(cookieParser());
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(morgan('dev'));
-
 app.set('view engine', 'ejs');
 
 function generateRandomString() {
@@ -26,16 +28,17 @@ var urlDatabase = {
 
 //Root route
 app.get("/", (req, res) => {
-  res.end("Hello!");
+  //console.log(req.cookies[]);
+  res.end("Hello! " + req.cookies['username']);
 });
 
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
+// app.get("/urls.json", (req, res) => {
+//   res.json(urlDatabase);
+// });
 
-app.get("/hello", (req, res) => {
-  res.end("<html><body>Hello <b>World</b></body></html>\n");
-});
+// app.get("/hello", (req, res) => {
+//   res.end("<html><body>Hello <b>World</b></body></html>\n");
+// });
 
 //Redirect short url to its website
 app.get("/u/:shortURL", (req, res) => {
@@ -45,22 +48,38 @@ app.get("/u/:shortURL", (req, res) => {
 
 //Home route
 app.get('/urls', (req, res) => {
-  let templateVars = { urls: urlDatabase };
+  let templateVars = {
+    urls: urlDatabase,
+    username: req.cookies['username']
+  };
   res.render('urls_index', templateVars);
 });
 
 //Page route to create new shortURL
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  res.render("urls_new", { username: req.cookies['username'] });
 });
 
-//Retrieve short url
+//Retrieve short url database
 app.get('/urls/:id', (req, res) => {
   let templateVars = {
     shortURL: req.params.id,
-    urls: urlDatabase
+    urls: urlDatabase,
+    username: req.cookies['username']
   };
   res.render('urls_show', templateVars);
+});
+
+//Login endpoint
+app.post('/login', (req, res) => {
+  res.cookie('username', req.body.username);
+  res.redirect('/');
+});
+
+//Logout endpoint
+app.post('/logout', (req, res) => {
+  res.clearCookie('username', req.cookies['username']);
+  res.redirect('/');
 });
 
 //Create a new short url
