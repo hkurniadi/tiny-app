@@ -45,8 +45,9 @@ const usersDatabase = {
   }
 };
 
-//Function Definitions
+//FUNCTION DEFINITIONS
 //=====================
+//To create the next random user id in database
 function nextUserId() {
   let userId = 'user';
   userId += generateRandomString();
