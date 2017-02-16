@@ -5,7 +5,7 @@
 </head>
 <body>
   <p><%= `Short URL: ${shortURL}` %></p>
-  <p><%= `Long URL: ${urls[shortURL]}` %></p>
+  <p><%= `Long URL: ${urlsDB[shortURL]}` %></p>
   <form method = 'POST' action = '/urls/<%= shortURL %>'>
     <label for = 'longURL'>Enter new URL: </label>
     <input id = 'longURL' name = 'newLongURL' placeholder = 'http://'>

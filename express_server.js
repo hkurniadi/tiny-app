@@ -36,23 +36,41 @@ const usersDatabase = {
   "userRandomID": {
     id: "userRandomID",
     email: "user@example.com",
-    password: "purple-monkey-dinosaur"
+    password: "12345"
   },
  "user2RandomID": {
     id: "user2RandomID",
     email: "user2@example.com",
-    password: "dishwasher-funk"
+    password: "qwerty"
   }
 };
 
+//Function Definitions
+//=====================
 function nextUserId() {
   let userId = 'user';
   userId += generateRandomString();
   return userId;
 }
 
+//To check if user is currently logged in (i.e. 'user_id' cookies exists)
+function isLoggedIn(request) {
+  let user;
+  //If user is logged in, return the user_id
+  if (request.cookies['user_id']) {
+    user = request.cookies['user_id'];
+    return user;
+  //If user is not logged in, return empty user_id
+  } else {
+    return user;
+  }
+}
+
 //ROUTES
 //======
+
+//GET ROUTES
+//----------
 
 //Root route
 app.get("/", (req, res) => {
@@ -65,42 +83,59 @@ app.get("/u/:shortURL", (req, res) => {
   res.redirect(longURL);
 });
 
-//Home Route
+//Index Page Route
 app.get('/urls', (req, res) => {
+  let isUserLoggedIn = isLoggedIn(req);
   let templateVars = {
-    urls: urlDatabase,
-    username: req.cookies['username']
+    urlsDB: urlDatabase,
+    usersDB: usersDatabase,
+    user: isUserLoggedIn
   };
   res.render('urls_index', templateVars);
 });
 
-//Registration Route
+//Registration Page Route
 app.get('/register', (req, res) => {
   res.render('urls_registration');
 });
 
-//Page route to create new shortURL
-app.get("/urls/new", (req, res) => {
-  res.render("urls_new", { username: req.cookies['username'] });
+//Login Page Route
+app.get('/login', (req, res) => {
+  res.render('urls_login')
 });
 
-//Retrieve short url database
+//Creating new url Route
+app.get("/urls/new", (req, res) => {
+  let isUserLoggedIn = isLoggedIn(req);
+  res.render("urls_new", { users: usersDatabase, user: isUserLoggedIn });
+});
+
+//Retrieve particular short url Route
 app.get('/urls/:id', (req, res) => {
+  let isUserLoggedIn = isLoggedIn(req);
   let templateVars = {
+    urlsDB: urlDatabase,
+    usersDB: usersDatabase,
     shortURL: req.params.id,
-    urls: urlDatabase,
-    username: req.cookies['username']
+    user: isUserLoggedIn
   };
   res.render('urls_show', templateVars);
 });
 
-//Create new user
+//POST ROUTES
+//-----------
+
+//Create new user endpoint
 app.post('/register', (req, res) => {
-  console.log(req.body.email);
+  //console.log(req.body.email);
+
+  //Check if email and password are empty
   if (!req.body['email'] || !req.body['password']) {
     res.status(400);
     res.send('Please provide email and password');
   }
+
+  //Check if email already exists in the database
   for (let id in usersDatabase) {
     if (usersDatabase[id]['email'] === req.body['email']) {
       res.status(400);
@@ -120,21 +155,37 @@ app.post('/register', (req, res) => {
 
 //Login endpoint
 app.post('/login', (req, res) => {
-  res.cookie('username', req.body.username);
-  res.redirect('/');
+  let user;
+  //Check if credentials are in the database
+  for (let userId in usersDatabase) {
+    if (usersDatabase[userId]['email'] === req.body['email']) {
+      user = usersDatabase[userId];
+      break;
+    }
+  }
+  //Check if password is correct given the email
+  if (user) {
+    if (user['password'] === req.body['password']) {
+      res.cookie('user_id', user['id']);
+      res.redirect('/');
+      return;
+    }
+  }
+  //Else, if email is not in database or password does not match given the email
+  res.status(403).send('Bad credentials');
 });
 
 //Logout endpoint
 app.post('/logout', (req, res) => {
-  res.clearCookie('username', req.cookies['username']);
+  res.clearCookie('user_id', req.cookies['user_id']);
   res.redirect('/');
 });
 
-//Create a new short url
+//Create a new short url endpoint
 app.post("/urls", (req, res) => {
   var shortURL = generateRandomString();
 
-  //Conditions to check if the input is lacking http:// or https:// or wwww.
+  //TODO make conditions to check if the input is lacking http:// or https:// or wwww.
   // if ((req.body.longURL.indexOf('http://') >= 0 || req.body.longURL.indexOf('https://') >= 0) && req.body.longURL.indexOf('www.') > 0 ) {
   //  urlDatabase[shortURL] = req.body.longURL;
   // } else if ((req.body.longURL.indexOf('http://') < 0 || req.body.longURL.indexOf('https://') < 0) && req.body.longURL.indexOf('www.') >= 0) {

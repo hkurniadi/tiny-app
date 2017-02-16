@@ -5,8 +5,8 @@
 </head>
 <body>
   <ul>
-    <% for (let shortURL in urls) { %>
-      <li><%= `${shortURL} - ${urls[shortURL]}` %></li>
+    <% for (let shortURL in urlsDB) { %>
+      <li><%= `${shortURL} - ${urlsDB[shortURL]}` %></li>
       <form method='GET' action='/urls/<%= shortURL %>'>
         <a href = '/urls/<%= shortURL %>'>Edit URL</a>
       </form>
