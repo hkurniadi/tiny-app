@@ -8,8 +8,8 @@
     <% userUrls.forEach((url) => { %>
       <ul>
         <li><%= `${url['shortUrl']} - ${url['website']}` %></li>
-        <form method='GET' action='/urls/<%= url %>'>
-          <a href = '/urls/<%= url['shortUrl'] %>'>Edit URL</a>
+        <form method='GET' action='/urls/<%= url['shortUrl'] %>'>
+          <button>Edit URL</button>
         </form>
         <form method='POST' action='/urls/<%= url['shortUrl'] %>/delete'>
           <button>Delete URL</button>

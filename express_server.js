@@ -1,13 +1,20 @@
 //Dependancies
 const express = require("express");
 const app = express();
-const cookieParser = require('cookie-parser');
+const cookieSession = require('cookie-session');
 const bodyParser = require("body-parser");
 const morgan = require('morgan');
+const bcrypt = require('bcrypt');
 const PORT = process.env.PORT || 8080; // default port 8080
 
 //Middlewares
-app.use(cookieParser());
+app.use(cookieSession({
+  name: 'session',
+  keys: [process.env.SESSION_SECRET || 'development'],
+
+  // Cookie Options
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+}));
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(morgan('dev'));
 app.set('view engine', 'ejs');
@@ -34,12 +41,12 @@ const usersDatabase = {
   "userRandomID": {
     id: "userRandomID",
     email: "user@example.com",
-    password: "12345"
+    password: bcrypt.hashSync("12345", 10)
   },
  "user2RandomID": {
     id: "user2RandomID",
     email: "user2@example.com",
-    password: "qwerty"
+    password: bcrypt.hashSync("qwerty", 10)
   }
 };
 
@@ -67,8 +74,8 @@ function nextUserId() {
 function loggedInAs(request) {
   let user;
   //If user is logged in, return the user_id
-  if (request.cookies['user_id']) {
-    user = request.cookies['user_id'];
+  if (request.session['user_id']) {
+    user = request.session['user_id'];
     return user;
   //If user is not logged in, return empty user_id
   } else {
@@ -155,12 +162,13 @@ app.get('/urls/:id', (req, res) => {
 //POST ROUTES
 //-----------
 
-//Create new user endpoint
+//Registration endpoint
 app.post('/register', (req, res) => {
-  //console.log(req.body.email);
+  const password = req.body['password'];
+  const hashed_password = bcrypt.hashSync(password, 10);
 
   //Check if email and password are empty
-  if (!req.body['email'] || !req.body['password']) {
+  if (!req.body['email'] || !password) {
     res.status(400);
     res.send('Please provide email and password');
   }
@@ -177,14 +185,16 @@ app.post('/register', (req, res) => {
   usersDatabase[userId] = {
     id: userId,
     email: req.body['email'],
-    password: req.body['password']
+    password: hashed_password
   };
-  res.cookie('user_id', userId);
+  console.log(usersDatabase);
+  req.session.user_id = userId;
   res.redirect('/');
 });
 
 //Login endpoint
 app.post('/login', (req, res) => {
+  const password = req.body['password'];
   let user;
   //Check if credentials are in the database
   for (let userId in usersDatabase) {
@@ -193,10 +203,11 @@ app.post('/login', (req, res) => {
       break;
     }
   }
+  //console.log(user['password']);
   //Check if password is correct given the email
   if (user) {
-    if (user['password'] === req.body['password']) {
-      res.cookie('user_id', user['id']);
+    if (bcrypt.compareSync(password, user['password'])) {
+      req.session.user_id = user['id'];
       res.redirect('/');
       return;
     }
@@ -207,7 +218,7 @@ app.post('/login', (req, res) => {
 
 //Logout endpoint
 app.post('/logout', (req, res) => {
-  res.clearCookie('user_id', req.cookies['user_id']);
+  req.session = null;
   res.redirect('/');
 });
 
@@ -229,14 +240,14 @@ app.post("/urls", (req, res) => {
   urlDatabase[shortURL] = {};
   urlDatabase[shortURL]['shortUrl'] = shortURL;
   urlDatabase[shortURL]['website'] = req.body.longURL.indexOf('http://') > 0 ? req.body.longURL : `http://${req.body.longURL}`;
-  urlDatabase[shortURL]['userId'] = req.cookies['user_id'];
+  urlDatabase[shortURL]['userId'] = req.session['user_id'];
   res.redirect(`/urls/${shortURL}`);
 });
 
 //Update short url
 app.post('/urls/:shortURL', (req, res) => {
   if (urlDatabase.hasOwnProperty(req.params.shortURL)) {
-    urlDatabase[req.params.shortURL]['website'] = req.body.newLongURL;
+    urlDatabase[req.params.shortURL]['website'] = req.body.newLongURL.indexOf('http://') > 0 ? req.body.newLongURL : `http://${req.body.newLongURL}`;
   }
   res.redirect('/urls');
 })
