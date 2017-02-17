@@ -4,20 +4,21 @@
   <% include ./partials/_header %>
 </head>
 <body>
-  <ul>
-    <% for (let shortURL in urlsDB) { %>
-      <li><%= `${shortURL} - ${urlsDB[shortURL]}` %></li>
-      <form method='GET' action='/urls/<%= shortURL %>'>
-        <a href = '/urls/<%= shortURL %>'>Edit URL</a>
-      </form>
-      <form method='POST' action='/urls/<%= shortURL %>/delete'>
-        <input type='submit' value='Delete URL'>
-      </form>
-    <% } %>
-  </ul>
-
-  <ul>
-    <li><a href='/urls/new'>Click here to shorten your URL</a></li>
-  </ul>
+  <% if (user) { %>
+    <% userUrls.forEach((url) => { %>
+      <ul>
+        <li><%= `${url['shortUrl']} - ${url['website']}` %></li>
+        <form method='GET' action='/urls/<%= url %>'>
+          <a href = '/urls/<%= url['shortUrl'] %>'>Edit URL</a>
+        </form>
+        <form method='POST' action='/urls/<%= url['shortUrl'] %>/delete'>
+          <button>Delete URL</button>
+        </form>
+      </ul>
+    <% }); %>
+  <a href='/urls/new'>Click here to shorten your URL</a>
+  <% } else { %>
+    <h2>Please login to see the list of shortened URLs</h2>
+  <% } %>
 </body>
 </html>

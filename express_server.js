@@ -17,8 +17,16 @@ app.set('view engine', 'ejs');
 
 //URLs Database
 var urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  "b2xVn2": {
+    shortUrl: "b2xVn2",
+    website: "http://www.lighthouselabs.ca",
+    userId: "userRandomID"
+  },
+  "9sm5xK": {
+    shortUrl: "9sm5xK",
+    website: "http://www.google.com",
+    userId: "user2RandomID"
+  }
 };
 
 //Users Database
@@ -53,10 +61,10 @@ function nextUserId() {
   let userId = 'user';
   userId += generateRandomString();
   return userId;
-}
+};
 
 //To check if user is currently logged in (i.e. 'user_id' cookies exists)
-function isLoggedIn(request) {
+function loggedInAs(request) {
   let user;
   //If user is logged in, return the user_id
   if (request.cookies['user_id']) {
@@ -66,7 +74,18 @@ function isLoggedIn(request) {
   } else {
     return user;
   }
-}
+};
+
+//To create and return an array that consists of shortURLs specific to a user id
+function urlsForUser(id) {
+  let userUrlsCollection = [];
+  for (let shortUrl in urlDatabase) {
+    if (id === urlDatabase[shortUrl]['userId']) {
+      userUrlsCollection.push(urlDatabase[shortUrl]);
+    }
+  }
+  return userUrlsCollection;
+};
 
 //ROUTES
 //======
@@ -81,17 +100,17 @@ app.get("/", (req, res) => {
 
 //Redirect short url to its website
 app.get("/u/:shortURL", (req, res) => {
-  let longURL = urlDatabase[req.params.shortURL];
-  res.redirect(longURL);
+  let actualWebsite = urlDatabase[req.params.shortURL]['website'];
+  res.redirect(actualWebsite);
 });
 
 //Index Page Route
 app.get('/urls', (req, res) => {
-  let isUserLoggedIn = isLoggedIn(req);
+  let userLoginId = loggedInAs(req);
   let templateVars = {
     urlsDB: urlDatabase,
-    usersDB: usersDatabase,
-    user: isUserLoggedIn
+    user: userLoginId,
+    userUrls: urlsForUser(userLoginId)
   };
   res.render('urls_index', templateVars);
 });
@@ -108,20 +127,29 @@ app.get('/login', (req, res) => {
 
 //Creating new url Route
 app.get("/urls/new", (req, res) => {
-  let isUserLoggedIn = isLoggedIn(req);
-  res.render("urls_new", { users: usersDatabase, user: isUserLoggedIn });
+  let userLoginId = loggedInAs(req);
+  if (!userLoginId) {
+    res.redirect('/login');
+  } else {
+    res.render("urls_new", { users: usersDatabase, user: userLoginId });
+  }
 });
 
 //Retrieve particular short url Route
 app.get('/urls/:id', (req, res) => {
-  let isUserLoggedIn = isLoggedIn(req);
-  let templateVars = {
-    urlsDB: urlDatabase,
-    usersDB: usersDatabase,
-    shortURL: req.params.id,
-    user: isUserLoggedIn
-  };
-  res.render('urls_show', templateVars);
+  let userLoginId = loggedInAs(req);
+  if (!userLoginId) {
+    res.redirect('/login');
+  } else {
+    let templateVars = {
+      urlsDB: urlDatabase,
+      usersDB: usersDatabase,
+      shortURL: req.params.id,
+      user: userLoginId
+    };
+    //console.log(shortURL);
+    res.render('urls_show', templateVars);
+  }
 });
 
 //POST ROUTES
@@ -144,7 +172,7 @@ app.post('/register', (req, res) => {
       res.send('Please use other email');
     }
   }
-
+  //Else, create new user
   let userId = nextUserId();
   usersDatabase[userId] = {
     id: userId,
@@ -198,14 +226,17 @@ app.post("/urls", (req, res) => {
   //   urlDatabase[shortURL] = `http://www.${req.body.longURL}`;
   // }
 
-  urlDatabase[shortURL] = req.body.longURL.indexOf('http://') > 0 ? req.body.longURL : `http://${req.body.longURL}`;
+  urlDatabase[shortURL] = {};
+  urlDatabase[shortURL]['shortUrl'] = shortURL;
+  urlDatabase[shortURL]['website'] = req.body.longURL.indexOf('http://') > 0 ? req.body.longURL : `http://${req.body.longURL}`;
+  urlDatabase[shortURL]['userId'] = req.cookies['user_id'];
   res.redirect(`/urls/${shortURL}`);
 });
 
 //Update short url
 app.post('/urls/:shortURL', (req, res) => {
   if (urlDatabase.hasOwnProperty(req.params.shortURL)) {
-    urlDatabase[req.params.shortURL] = req.body.newLongURL;
+    urlDatabase[req.params.shortURL]['website'] = req.body.newLongURL;
   }
   res.redirect('/urls');
 })
