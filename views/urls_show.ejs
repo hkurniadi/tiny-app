@@ -5,11 +5,16 @@
 </head>
 <body>
   <p><%= `Short URL: ${shortURL}` %></p>
-  <p><%= `Long URL: ${urlsDB[shortURL]['website']}` %></p>
   <form method = 'POST' action = '/urls/<%= shortURL %>'>
-    <label for = 'url-field'>Enter new URL: </label>
-    <input id = 'url-field' name = 'newLongURL' placeholder = 'http://'>
-    <button>Update URL</button>
+    <label for = 'url-field'></label>
+    <input id = 'url-field' name = 'newLongURL' style = "width: 300px" placeholder = '<%= urlsDB[shortURL]['website'] %>'>
+    <br><button>Update URL</button>
+  </form>
+  <form method='GET' action='/u/<%= shortURL %>'>
+    <button>Go to link</button>
+  </form>
+  <form method='POST' action='/urls/<%= shortURL %>/delete'>
+    <button>Delete URL</button>
   </form>
   <br>
   <form method = 'GET' action = '/urls'>

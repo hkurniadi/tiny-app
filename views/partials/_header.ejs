@@ -1,6 +1,9 @@
 <title>TinyApp</title>
+<h1>Welcome to TinyURL App!</h1>
+
 <% if (user) { %>
-  <h1>Logged in as <%= user %></h1>
+  <h1>Logged in as: <%= usersDB[user]['email'] %></h1>
+  <h2><a href = '/urls'>My Link</a></h2>
   <form method = 'POST' action = '/logout'>
     <button>Logout</button>
   </form>

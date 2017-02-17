@@ -5,9 +5,13 @@
 </head>
 <body>
   <% if (user) { %>
+    <h2>Your Short URLs: </h2>
     <% userUrls.forEach((url) => { %>
       <ul>
         <li><%= `${url['shortUrl']} - ${url['website']}` %></li>
+        <form method='GET' action='/u/<%= url['shortUrl'] %>'>
+          <button>Go to link</button>
+        </form>
         <form method='GET' action='/urls/<%= url['shortUrl'] %>'>
           <button>Edit URL</button>
         </form>
@@ -16,9 +20,14 @@
         </form>
       </ul>
     <% }); %>
-  <a href='/urls/new'>Click here to shorten your URL</a>
+      <ul>
+        <li><a href='/urls/new'>Create a new short link</a></li>
+      </ul>
   <% } else { %>
-    <h2>Please login to see the list of shortened URLs</h2>
+    <h2>Please login</h2>
+    <form method = 'GET' action = '/login'>
+      <button>Login</button>
+    </form>
   <% } %>
 </body>
 </html>

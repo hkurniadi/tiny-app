@@ -102,60 +102,85 @@ function urlsForUser(id) {
 
 //Root route
 app.get("/", (req, res) => {
-  res.end("Hello!");
-});
-
-//Redirect short url to its website
-app.get("/u/:shortURL", (req, res) => {
-  let actualWebsite = urlDatabase[req.params.shortURL]['website'];
-  res.redirect(actualWebsite);
+  if (loggedInAs(req)) {
+    res.redirect('/urls');
+  } else {
+    res.redirect('/login');
+  }
 });
 
 //Index Page Route
 app.get('/urls', (req, res) => {
-  let userLoginId = loggedInAs(req);
-  let templateVars = {
-    urlsDB: urlDatabase,
-    user: userLoginId,
-    userUrls: urlsForUser(userLoginId)
-  };
-  res.render('urls_index', templateVars);
+  if (!loggedInAs(req)) {
+    res.status(401).render('401_error');
+  } else {
+    let templateVars = {
+      urlsDB: urlDatabase,
+      usersDB: usersDatabase,
+      user: loggedInAs(req),
+      userUrls: urlsForUser(loggedInAs(req))
+    };
+    res.status(200).render('urls_index', templateVars);
+  }
+
 });
+
+//Redirect short url to its website
+app.get("/u/:id", (req, res) => {
+  let readId = req.params.id;
+  if (urlDatabase.hasOwnProperty(readId)) {
+    let actualWebsite = urlDatabase[req.params.id]['website'];
+    res.redirect(actualWebsite);
+  } else {
+    res.status(404).render('404_error');
+  }
+});
+
 
 //Registration Page Route
 app.get('/register', (req, res) => {
-  res.render('urls_registration');
+  if (loggedInAs(req)) {
+    res.redirect('/');
+  } else {
+    res.status(200).render('urls_registration', { user: loggedInAs(req) });
+  }
 });
 
 //Login Page Route
 app.get('/login', (req, res) => {
-  res.render('urls_login')
+  if (loggedInAs(req)){
+    res.redirect('/');
+  } else {
+    res.status(200).render('urls_login', { user: loggedInAs(req) });
+  }
 });
 
 //Creating new url Route
 app.get("/urls/new", (req, res) => {
-  let userLoginId = loggedInAs(req);
-  if (!userLoginId) {
-    res.redirect('/login');
+  if (!loggedInAs(req)) {
+    res.status(401).render('401_error');
   } else {
-    res.render("urls_new", { users: usersDatabase, user: userLoginId });
+    res.status(200).render("urls_new", { usersDB: usersDatabase, user: loggedInAs(req) });
   }
 });
 
-//Retrieve particular short url Route
+//Retrieve particular short url Route (:id)
 app.get('/urls/:id', (req, res) => {
-  let userLoginId = loggedInAs(req);
-  if (!userLoginId) {
-    res.redirect('/login');
+  let readId = req.params.id;
+  if (!urlDatabase.hasOwnProperty(readId)) {
+    res.status(404).render('404_error');
+  } else if (!loggedInAs(req)) {
+    res.status(401).render('401_error');
+  } else if (loggedInAs(req) !== urlDatabase[readId]['userId']) {
+    res.status(403).render('403_error');
   } else {
     let templateVars = {
       urlsDB: urlDatabase,
       usersDB: usersDatabase,
       shortURL: req.params.id,
-      user: userLoginId
+      user: loggedInAs(req)
     };
-    //console.log(shortURL);
-    res.render('urls_show', templateVars);
+    res.status(200).render('urls_show', templateVars);
   }
 });
 
@@ -165,29 +190,26 @@ app.get('/urls/:id', (req, res) => {
 //Registration endpoint
 app.post('/register', (req, res) => {
   const password = req.body['password'];
-  const hashed_password = bcrypt.hashSync(password, 10);
 
   //Check if email and password are empty
   if (!req.body['email'] || !password) {
-    res.status(400);
-    res.send('Please provide email and password');
+    res.status(400).send('Please provide email and password');
   }
 
   //Check if email already exists in the database
   for (let id in usersDatabase) {
     if (usersDatabase[id]['email'] === req.body['email']) {
-      res.status(400);
-      res.send('Please use other email');
+      res.status(400).send('Email is already used, please use other email');
     }
   }
   //Else, create new user
   let userId = nextUserId();
+  const hashed_password = bcrypt.hashSync(password, 10);
   usersDatabase[userId] = {
     id: userId,
     email: req.body['email'],
     password: hashed_password
   };
-  console.log(usersDatabase);
   req.session.user_id = userId;
   res.redirect('/');
 });
@@ -213,7 +235,7 @@ app.post('/login', (req, res) => {
     }
   }
   //Else, if email is not in database or password does not match given the email
-  res.status(403).send('Bad credentials');
+  res.status(401).render('401_error');
 });
 
 //Logout endpoint
@@ -224,33 +246,44 @@ app.post('/logout', (req, res) => {
 
 //Create a new short url endpoint
 app.post("/urls", (req, res) => {
-  var shortURL = generateRandomString();
+  if (loggedInAs(req)) {
+    var shortURL = generateRandomString();
 
-  //TODO make conditions to check if the input is lacking http:// or https:// or wwww.
-  // if ((req.body.longURL.indexOf('http://') >= 0 || req.body.longURL.indexOf('https://') >= 0) && req.body.longURL.indexOf('www.') > 0 ) {
-  //  urlDatabase[shortURL] = req.body.longURL;
-  // } else if ((req.body.longURL.indexOf('http://') < 0 || req.body.longURL.indexOf('https://') < 0) && req.body.longURL.indexOf('www.') >= 0) {
-  //   urlDatabase[shortURL] = `http://${req.body.longURL}`;
-  // } else if ((req.body.longURL.indexOf('http://') >= 0 || req.body.longURL.indexOf('https://') >= 0) && req.body.longURL.indexOf('www.') < 0) {
-  //   urlDatabase[shortURL] = `www.${req.body.longURL}`;   //<== condition still not correct, may need String.substring()
-  // } else {
-  //   urlDatabase[shortURL] = `http://www.${req.body.longURL}`;
-  // }
+    //TODO make conditions to check if the input is lacking http:// or https:// or wwww.
+    // if ((req.body.longURL.indexOf('http://') >= 0 || req.body.longURL.indexOf('https://') >= 0) && req.body.longURL.indexOf('www.') > 0 ) {
+    //  urlDatabase[shortURL] = req.body.longURL;
+    // } else if ((req.body.longURL.indexOf('http://') < 0 || req.body.longURL.indexOf('https://') < 0) && req.body.longURL.indexOf('www.') >= 0) {
+    //   urlDatabase[shortURL] = `http://${req.body.longURL}`;
+    // } else if ((req.body.longURL.indexOf('http://') >= 0 || req.body.longURL.indexOf('https://') >= 0) && req.body.longURL.indexOf('www.') < 0) {
+    //   urlDatabase[shortURL] = `www.${req.body.longURL}`;   //<== condition still not correct, may need String.substring()
+    // } else {
+    //   urlDatabase[shortURL] = `http://www.${req.body.longURL}`;
+    // }
 
-  urlDatabase[shortURL] = {};
-  urlDatabase[shortURL]['shortUrl'] = shortURL;
-  urlDatabase[shortURL]['website'] = req.body.longURL.indexOf('http://') > 0 ? req.body.longURL : `http://${req.body.longURL}`;
-  urlDatabase[shortURL]['userId'] = req.session['user_id'];
-  res.redirect(`/urls/${shortURL}`);
+    urlDatabase[shortURL] = {};
+    urlDatabase[shortURL]['shortUrl'] = shortURL;
+    urlDatabase[shortURL]['website'] = req.body.longURL.indexOf('http://') > 0 ? req.body.longURL : `http://${req.body.longURL}`;
+    urlDatabase[shortURL]['userId'] = req.session['user_id'];
+    res.redirect(`/urls/${shortURL}`);
+  } else {
+    res.status(401).render('401_error');
+  }
 });
 
 //Update short url
-app.post('/urls/:shortURL', (req, res) => {
-  if (urlDatabase.hasOwnProperty(req.params.shortURL)) {
-    urlDatabase[req.params.shortURL]['website'] = req.body.newLongURL.indexOf('http://') > 0 ? req.body.newLongURL : `http://${req.body.newLongURL}`;
+app.post('/urls/:id', (req, res) => {
+  let readId = req.params.id;
+  if (!urlDatabase.hasOwnProperty(readId)) {
+    res.status(404).render('404_error');
+  } else if (!loggedInAs(req)) {
+    res.status(401).render('401_error');
+  } else if (loggedInAs(req) !== urlDatabase[readId]['userId']) {
+    res.status(403).render('403_error');
+  } else {
+    urlDatabase[readId]['website'] = req.body.newLongURL.indexOf('http://') > 0 ? req.body.newLongURL : `http://${req.body.newLongURL}`;
+    res.redirect(`/urls/${readId}`);
   }
-  res.redirect('/urls');
-})
+});
 
 //Delete short url
 app.post('/urls/:shortURL/delete', (req, res) => {
