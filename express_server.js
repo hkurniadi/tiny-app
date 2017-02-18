@@ -135,8 +135,26 @@ app.get("/u/:id", (req, res) => {
   if (urlDatabase.hasOwnProperty(readId)) {
     let actualWebsite = urlDatabase[req.params.id]['website'];
     res.redirect(actualWebsite);
-    urlDatabase[readId]['visitCount'] += 1;
     //console.log(urlDatabase[readId]['visitCount']);
+
+    //if the user id cookie who accesses the short url is different than the short url's user id
+    //then that means the user is unique visitor id
+    if (req.session['user_id'] !== urlDatabase[readId]['userId']) {
+      if (urlDatabase[readId]['visitors']['visitor_id'].includes(req.session['user_id'])) {
+        urlDatabase[readId]['visitors']['visitorsCount'] += 1;
+        urlDatabase[readId]['visitors']['timestamp'] = new Date();
+        urlDatabase[readId]['visitCount'] += 1;
+        console.log("Unique visitor to this short url site", urlDatabase[readId]['visitors']);
+      } else {
+        urlDatabase[readId]['visitors']['visitor_id'].push(req.session['user_id']);
+        urlDatabase[readId]['visitors']['timestamp'] = new Date();
+        urlDatabase[readId]['visitors']['visitorsCount'] += 1;
+        urlDatabase[readId]['visitCount'] += 1;
+        console.log("Unique visitor to this short url site", urlDatabase[readId]['visitors']);
+      }
+    } else {
+      urlDatabase[readId]['visitCount'] += 1;
+    }
     return;
   }
   res.status(404).render('404_error');
@@ -266,12 +284,22 @@ app.post("/urls", (req, res) => {
     //   urlDatabase[shortURL] = `http://www.${req.body.longURL}`;
     // }
 
+    //add the basic properties
     urlDatabase[shortURL] = {};
     urlDatabase[shortURL]['shortUrl'] = shortURL;
     urlDatabase[shortURL]['website'] = correctUrl(req);
     urlDatabase[shortURL]['userId'] = req.session['user_id'];
     urlDatabase[shortURL]['dateCreated'] = new Date().toUTCString();
+
+    //add the number of visit property to count non-unique visits
     urlDatabase[shortURL]['visitCount'] = 0;
+
+    //initialize some of the unique visitor's properties
+    urlDatabase[shortURL]['visitors'] = {};
+    urlDatabase[shortURL]['visitors']['visitor_id'] = [];
+    urlDatabase[shortURL]['visitors']['visitorsCount'] = 0;
+    //console.log("Unique visit", urlDatabase[shortURL]['visitors']);
+
     res.redirect(`/urls/${shortURL}`);
     return;
   }

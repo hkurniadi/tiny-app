@@ -12,6 +12,7 @@
         <li><%= `${url['shortUrl']} - ${url['website']}` %></li>
         <p>Created on <%= url['dateCreated'] %></p>
         <p>Number of visits: <%= url['visitCount'] %></p>
+
         <form method='GET' action='/u/<%= url['shortUrl'] %>'>
           <button>Go to the website</button>
         </form>

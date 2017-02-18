@@ -8,6 +8,7 @@
   <p><%= `Short URL: ${shortURL}` %></p>
   <p>Created on <%= urlsDB[shortURL]['dateCreated'] %> </p>
   <p>Number of visits: <%= urlsDB[shortURL]['visitCount'] %></p>
+
   <form method='POST' action='/urls/<%= shortURL %>?_method=PUT'>
     <label for='url-field'>Website</label>
     <input id='url-field' name='longURL' style="width: 300px" placeholder='<%= urlsDB[shortURL]['website'] %>'>
