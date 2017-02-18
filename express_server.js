@@ -28,34 +28,10 @@ app.use(methodOverride('_method'));
 
 //URLs Database
 //should be emptied before submission
-var urlDatabase = {
-  "b2xVn2": {
-    shortUrl: "b2xVn2",
-    website: "http://www.lighthouselabs.ca",
-    userId: "userRandomID",
-    dateCreated: new Date().toUTCString()
-  },
-  "9sm5xK": {
-    shortUrl: "9sm5xK",
-    website: "http://www.google.com",
-    userId: "user2RandomID",
-    dateCreated: new Date().toUTCString()
-  }
-};
+const urlDatabase = {};
 
 //Users Database
-const usersDatabase = {
-  "userRandomID": {
-    id: "userRandomID",
-    email: "user@example.com",
-    password: bcrypt.hashSync("12345", 10)
-  },
- "user2RandomID": {
-    id: "user2RandomID",
-    email: "user2@example.com",
-    password: bcrypt.hashSync("qwerty", 10)
-  }
-};
+const usersDatabase = {};
 
 //FUNCTION DEFINITIONS
 
@@ -272,17 +248,6 @@ app.post('/logout', (req, res) => {
 app.post("/urls", (req, res) => {
   if (loggedInAs(req)) {
     let shortURL = generateRandomString();
-
-    //TODO make conditions to check if the input is lacking http:// or https:// or wwww.
-    // if ((req.body.longURL.indexOf('http://') >= 0 || req.body.longURL.indexOf('https://') >= 0) && req.body.longURL.indexOf('www.') > 0 ) {
-    //  urlDatabase[shortURL] = req.body.longURL;
-    // } else if ((req.body.longURL.indexOf('http://') < 0 || req.body.longURL.indexOf('https://') < 0) && req.body.longURL.indexOf('www.') >= 0) {
-    //   urlDatabase[shortURL] = `http://${req.body.longURL}`;
-    // } else if ((req.body.longURL.indexOf('http://') >= 0 || req.body.longURL.indexOf('https://') >= 0) && req.body.longURL.indexOf('www.') < 0) {
-    //   urlDatabase[shortURL] = `www.${req.body.longURL}`;   //<== condition still not correct, may need String.substring()
-    // } else {
-    //   urlDatabase[shortURL] = `http://www.${req.body.longURL}`;
-    // }
 
     //add the basic properties
     urlDatabase[shortURL] = {};
