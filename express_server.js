@@ -1,4 +1,4 @@
-//Dependancies
+//DEPENDANCIES
 const express = require("express");
 const cookieSession = require('cookie-session');
 const bodyParser = require("body-parser");
@@ -8,11 +8,11 @@ const methodOverride = require('method-override');
 
 const app = express();
 
-//Configuration
+//CONFIGURATION
 app.set('view engine', 'ejs');
 const PORT = process.env.PORT || 8080; // default port 8080
 
-//Middlewares
+//MIDDLEWARES
 app.use(cookieSession({
   name: 'session',
   keys: [process.env.SESSION_SECRET || 'development'],
@@ -135,6 +135,8 @@ app.get("/u/:id", (req, res) => {
   if (urlDatabase.hasOwnProperty(readId)) {
     let actualWebsite = urlDatabase[req.params.id]['website'];
     res.redirect(actualWebsite);
+    urlDatabase[readId]['visitCount'] += 1;
+    //console.log(urlDatabase[readId]['visitCount']);
     return;
   }
   res.status(404).render('404_error');
@@ -269,6 +271,7 @@ app.post("/urls", (req, res) => {
     urlDatabase[shortURL]['website'] = correctUrl(req);
     urlDatabase[shortURL]['userId'] = req.session['user_id'];
     urlDatabase[shortURL]['dateCreated'] = new Date().toUTCString();
+    urlDatabase[shortURL]['visitCount'] = 0;
     res.redirect(`/urls/${shortURL}`);
     return;
   }
