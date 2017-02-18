@@ -5,12 +5,14 @@
 </head>
 <body>
   <% if (user) { %>
+    <% include ./partials/_body %>
     <h2>Your Short URLs: </h2>
     <% userUrls.forEach((url) => { %>
       <ul>
         <li><%= `${url['shortUrl']} - ${url['website']}` %></li>
+        <p>Created on <%= url['dateCreated'] %></p>
         <form method='GET' action='/u/<%= url['shortUrl'] %>'>
-          <button>Go to link</button>
+          <button>Go to the website</button>
         </form>
         <form method='GET' action='/urls/<%= url['shortUrl'] %>'>
           <button>Edit URL</button>
@@ -20,12 +22,12 @@
         </form>
       </ul>
     <% }); %>
-      <ul>
-        <li><a href='/urls/new'>Create a new short link</a></li>
-      </ul>
+    <ul>
+      <li><a href='/urls/new'>Create a new short link</a></li>
+    </ul>
   <% } else { %>
     <h2>Please login</h2>
-    <form method = 'GET' action = '/login'>
+    <form method='GET' action='/login'>
       <button>Login</button>
     </form>
   <% } %>

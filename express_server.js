@@ -1,10 +1,15 @@
 //Dependancies
 const express = require("express");
-const app = express();
 const cookieSession = require('cookie-session');
 const bodyParser = require("body-parser");
 const morgan = require('morgan');
 const bcrypt = require('bcrypt');
+const methodOverride = require('method-override');
+
+const app = express();
+
+//Configuration
+app.set('view engine', 'ejs');
 const PORT = process.env.PORT || 8080; // default port 8080
 
 //Middlewares
@@ -17,22 +22,24 @@ app.use(cookieSession({
 }));
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(morgan('dev'));
-app.set('view engine', 'ejs');
+app.use(methodOverride('_method'));
 
 //DATABASES
-//=========
 
 //URLs Database
+//should be emptied before submission
 var urlDatabase = {
   "b2xVn2": {
     shortUrl: "b2xVn2",
     website: "http://www.lighthouselabs.ca",
-    userId: "userRandomID"
+    userId: "userRandomID",
+    dateCreated: new Date().toUTCString()
   },
   "9sm5xK": {
     shortUrl: "9sm5xK",
     website: "http://www.google.com",
-    userId: "user2RandomID"
+    userId: "user2RandomID",
+    dateCreated: new Date().toUTCString()
   }
 };
 
@@ -51,13 +58,13 @@ const usersDatabase = {
 };
 
 //FUNCTION DEFINITIONS
-//=====================
 
 function generateRandomString() {
-  var alphaNum = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  var randomStr = '';
-  for (var i = 0; i < 6; i++) {
-    var index = Math.floor(Math.random() * alphaNum.length);
+  let alphaNum = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  let randomStr = '';
+  //Make a random string of length 6
+  for (let i = 0; i < 6; i++) {
+    let index = Math.floor(Math.random() * alphaNum.length);
     randomStr += alphaNum[index];
   }
   return randomStr;
@@ -72,15 +79,9 @@ function nextUserId() {
 
 //To check if user is currently logged in (i.e. 'user_id' cookies exists)
 function loggedInAs(request) {
-  let user;
   //If user is logged in, return the user_id
-  if (request.session['user_id']) {
-    user = request.session['user_id'];
-    return user;
-  //If user is not logged in, return empty user_id
-  } else {
-    return user;
-  }
+  //If user is not logged in, return empty/undefined user_id
+  return request.session['user_id'];
 };
 
 //To create and return an array that consists of shortURLs specific to a user id
@@ -94,11 +95,15 @@ function urlsForUser(id) {
   return userUrlsCollection;
 };
 
-//ROUTES
-//======
+function correctUrl(request) {
+  if (!request.body.longURL.startsWith('http://') || request.body.longURL.startsWith('https://')) {
+    return `https://${request.body.longURL}`.trim();
+  }
+};
 
-//GET ROUTES
-//----------
+//ROUTES
+
+////GET ROUTES
 
 //Root route
 app.get("/", (req, res) => {
@@ -111,95 +116,95 @@ app.get("/", (req, res) => {
 
 //Index Page Route
 app.get('/urls', (req, res) => {
-  if (!loggedInAs(req)) {
-    res.status(401).render('401_error');
-  } else {
+  if (loggedInAs(req)) {
     let templateVars = {
       urlsDB: urlDatabase,
       usersDB: usersDatabase,
       user: loggedInAs(req),
-      userUrls: urlsForUser(loggedInAs(req))
+      userUrls: urlsForUser(loggedInAs(req)),
     };
-    res.status(200).render('urls_index', templateVars);
+    res.render('urls_index', templateVars);
+    return;
   }
-
+  res.status(401).render('401_error');
 });
 
-//Redirect short url to its website
+//Actual site redirection Route
 app.get("/u/:id", (req, res) => {
   let readId = req.params.id;
   if (urlDatabase.hasOwnProperty(readId)) {
     let actualWebsite = urlDatabase[req.params.id]['website'];
     res.redirect(actualWebsite);
-  } else {
-    res.status(404).render('404_error');
+    return;
   }
+  res.status(404).render('404_error');
 });
 
 
-//Registration Page Route
+//Register Route
 app.get('/register', (req, res) => {
   if (loggedInAs(req)) {
     res.redirect('/');
-  } else {
-    res.status(200).render('urls_registration', { user: loggedInAs(req) });
+    return;
   }
+  res.render('urls_registration');
 });
 
-//Login Page Route
+//Login Route
 app.get('/login', (req, res) => {
   if (loggedInAs(req)){
     res.redirect('/');
-  } else {
-    res.status(200).render('urls_login', { user: loggedInAs(req) });
+    return;
   }
+  res.render('urls_login');
 });
 
-//Creating new url Route
+//New short url Route
 app.get("/urls/new", (req, res) => {
-  if (!loggedInAs(req)) {
-    res.status(401).render('401_error');
-  } else {
-    res.status(200).render("urls_new", { usersDB: usersDatabase, user: loggedInAs(req) });
+  if (loggedInAs(req)) {
+    res.render("urls_new", { usersDB: usersDatabase, user: loggedInAs(req) });
+    return;
   }
+  res.status(401).render('401_error');
 });
 
-//Retrieve particular short url Route (:id)
+//Retrieve particular short url (:id) Route
 app.get('/urls/:id', (req, res) => {
   let readId = req.params.id;
   if (!urlDatabase.hasOwnProperty(readId)) {
     res.status(404).render('404_error');
+    return;
   } else if (!loggedInAs(req)) {
     res.status(401).render('401_error');
+    return;
   } else if (loggedInAs(req) !== urlDatabase[readId]['userId']) {
     res.status(403).render('403_error');
-  } else {
-    let templateVars = {
-      urlsDB: urlDatabase,
-      usersDB: usersDatabase,
-      shortURL: req.params.id,
-      user: loggedInAs(req)
-    };
-    res.status(200).render('urls_show', templateVars);
+    return;
   }
+  let templateVars = {
+    urlsDB: urlDatabase,
+    usersDB: usersDatabase,
+    shortURL: req.params.id,
+    user: loggedInAs(req),
+  };
+  res.status(200).render('urls_show', templateVars);
 });
 
-//POST ROUTES
-//-----------
+////POST ROUTES
 
-//Registration endpoint
+//Register Route
 app.post('/register', (req, res) => {
   const password = req.body['password'];
-
   //Check if email and password are empty
   if (!req.body['email'] || !password) {
     res.status(400).send('Please provide email and password');
+    return;
   }
-
   //Check if email already exists in the database
   for (let id in usersDatabase) {
     if (usersDatabase[id]['email'] === req.body['email']) {
       res.status(400).send('Email is already used, please use other email');
+      return;
     }
   }
   //Else, create new user
@@ -214,7 +219,7 @@ app.post('/register', (req, res) => {
   res.redirect('/');
 });
 
-//Login endpoint
+//Login Route
 app.post('/login', (req, res) => {
   const password = req.body['password'];
   let user;
@@ -225,7 +230,6 @@ app.post('/login', (req, res) => {
       break;
     }
   }
-  //console.log(user['password']);
   //Check if password is correct given the email
   if (user) {
     if (bcrypt.compareSync(password, user['password'])) {
@@ -247,7 +251,7 @@ app.post('/logout', (req, res) => {
 //Create a new short url endpoint
 app.post("/urls", (req, res) => {
   if (loggedInAs(req)) {
-    var shortURL = generateRandomString();
+    let shortURL = generateRandomString();
 
     //TODO make conditions to check if the input is lacking http:// or https:// or wwww.
     // if ((req.body.longURL.indexOf('http://') >= 0 || req.body.longURL.indexOf('https://') >= 0) && req.body.longURL.indexOf('www.') > 0 ) {
@@ -262,34 +266,36 @@ app.post("/urls", (req, res) => {
 
     urlDatabase[shortURL] = {};
     urlDatabase[shortURL]['shortUrl'] = shortURL;
-    urlDatabase[shortURL]['website'] = req.body.longURL.indexOf('http://') > 0 ? req.body.longURL : `http://${req.body.longURL}`;
+    urlDatabase[shortURL]['website'] = correctUrl(req);
     urlDatabase[shortURL]['userId'] = req.session['user_id'];
+    urlDatabase[shortURL]['dateCreated'] = new Date().toUTCString();
     res.redirect(`/urls/${shortURL}`);
-  } else {
-    res.status(401).render('401_error');
+    return;
   }
+  res.status(401).render('401_error');
 });
 
 //Update short url
-app.post('/urls/:id', (req, res) => {
+app.put('/urls/:id', (req, res) => {
   let readId = req.params.id;
   if (!urlDatabase.hasOwnProperty(readId)) {
     res.status(404).render('404_error');
+    return;
   } else if (!loggedInAs(req)) {
     res.status(401).render('401_error');
+    return;
   } else if (loggedInAs(req) !== urlDatabase[readId]['userId']) {
     res.status(403).render('403_error');
-  } else {
-    urlDatabase[readId]['website'] = req.body.newLongURL.indexOf('http://') > 0 ? req.body.newLongURL : `http://${req.body.newLongURL}`;
-    res.redirect(`/urls/${readId}`);
+    return;
   }
+  urlDatabase[readId]['website'] = correctUrl(req);
+  urlDatabase[readId]['dateCreated'] = new Date().toUTCString();
+  res.redirect(`/urls/${readId}`);
 });
 
 //Delete short url
-app.post('/urls/:shortURL/delete', (req, res) => {
-  if (urlDatabase.hasOwnProperty(req.params.shortURL)) {
-    delete urlDatabase[req.params.shortURL];
-  }
+app.delete('/urls/:id', (req, res) => {
+  delete urlDatabase[req.params.id];
   res.redirect('/urls');
 });
 

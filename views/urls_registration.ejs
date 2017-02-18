@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <h1>Welcome to TinyURL App!</h1>
+  <% include ./partials/_header %>
   <h1>Registration</h1>
 </head>
 <body>
-  <form method = 'POST' action = '/register'>
-    <label for = 'create-username'>Enter Email</label><br>
-    <input type = "email" name = "email" placeholder = "Email"><br>
-    <label for = 'create-password'>Create Password</label><br>
-    <input type = "password" name = "password" placeholder = "Password"><br>
+  <form method='POST' action='/register'>
+    <label for='create-username'>Enter Email</label><br>
+    <input type="email" name="email" placeholder="Email"><br>
+    <label for='create-password'>Create Password</label><br>
+    <input type="password" name="password" placeholder="Password"><br>
     <button>Register</button>
   </form>
 </body>

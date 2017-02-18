@@ -4,20 +4,22 @@
   <% include ./partials/_header %>
 </head>
 <body>
+  <% include ./partials/_body %>
   <p><%= `Short URL: ${shortURL}` %></p>
-  <form method = 'POST' action = '/urls/<%= shortURL %>'>
-    <label for = 'url-field'></label>
-    <input id = 'url-field' name = 'newLongURL' style = "width: 300px" placeholder = '<%= urlsDB[shortURL]['website'] %>'>
+  <p>Created on <%= urlsDB[shortURL]['dateCreated'] %> </p>
+  <form method='POST' action='/urls/<%= shortURL %>?_method=PUT'>
+    <label for='url-field'>Website</label>
+    <input id='url-field' name='longURL' style="width: 300px" placeholder='<%= urlsDB[shortURL]['website'] %>'>
     <br><button>Update URL</button>
   </form>
   <form method='GET' action='/u/<%= shortURL %>'>
-    <button>Go to link</button>
+    <button>Go to the website</button>
   </form>
-  <form method='POST' action='/urls/<%= shortURL %>/delete'>
+  <form method='POST' action='/urls/<%= shortURL %>?_method=DELETE'>
     <button>Delete URL</button>
   </form>
   <br>
-  <form method = 'GET' action = '/urls'>
+  <form method='GET' action='/urls'>
   <button>Back to Index</button>
   </form>
 </body>
