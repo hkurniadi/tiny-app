@@ -25,10 +25,19 @@ app.use(methodOverride('_method'));
 
 //URLs Database
 //should be emptied before submission
-const urlDatabase = {};
+const urlDatabase = { os1iZf:
+   { shortUrl: 'os1iZf',
+     website: 'https://www.lighthouselabs.ca',
+     userId: 'useraXpID1',
+     dateCreated: 'Sun, 26 Feb 2017 02:02:46 GMT',
+     visitCount: 0,
+     visitors: { visitor_id: [], visitorsCount: 0 } } };
 
 //Users Database
-const usersDatabase = {};
+const usersDatabase = { id: 'useraXpID1',
+     email: 'user1@user.com',
+     password: '$2a$10$Vk3Bt6gcsmSD5yc/d8rz3up5g291/wubIGDJqGcBCxq.mYIAyZohW' };
+
 
 //FUNCTION DEFINITIONS
 
@@ -287,8 +296,8 @@ app.post("/urls", (req, res) => {
 });
 
 //Update short url
-app.post('/urls/shortUrl', (req, res) => {
-  let shortUrl = req.params.id;
+app.put('/urls/:shortUrl', (req, res) => {
+  let shortUrl = req.params.shortUrl;
   if (!urlDatabase.hasOwnProperty(shortUrl)) {
     res.status(404).render('404_error');
     return;
@@ -305,8 +314,8 @@ app.post('/urls/shortUrl', (req, res) => {
 });
 
 //Delete short url
-app.delete('/urls/shortUrl', (req, res) => {
-  delete urlDatabase[req.params.id];
+app.delete('/urls/:shortUrl', (req, res) => {
+  delete urlDatabase[req.params.shortUrl];
   res.redirect('/urls');
 });
 
