@@ -1,4 +1,4 @@
-loggedIn//DEPENDANCIES
+getUserFromReq//DEPENDANCIES
 const express = require("express");
 const cookieSession = require('cookie-session');
 const bodyParser = require("body-parser");
@@ -51,7 +51,7 @@ function nextUserId() {
 };
 
 //To check if user is currently logged in (i.e. 'user_id' cookies exists)
-function loggedIn(request) {
+function getUserFromReq(request) {
   //If user is logged in, return the user_id
   //If user is not logged in, return empty/undefined user_id
   return request.session.user_id;
@@ -78,9 +78,9 @@ function urlsForUser(userId) {
   return userUrlsCollection;
 };
 
-function correctUrl(request) {
-  if (!request.body.longUrl.startsWith('http://') || request.body.longUrl.startsWith('https://')) {
-    return `https://${request.body.longUrl}`.trim();
+function correctUrl(url) {
+  if (!url.startsWith('http://') || url.startsWith('https://')) {
+    return `https://${url}`.trim();
   }
 };
 
@@ -90,7 +90,7 @@ function correctUrl(request) {
 
 //Root route
 app.get("/", (req, res) => {
-  if (loggedIn(req)) {
+  if (getUserFromReq(req)) {
     res.redirect('/urls');
   } else {
     res.redirect('/login');
@@ -99,8 +99,8 @@ app.get("/", (req, res) => {
 
 //Index Page Route
 app.get('/urls', (req, res) => {
-  let user = loggedIn(req);
-  if (loggedIn(req)) {
+  let user = getUserFromReq(req);
+  if (getUserFromReq(req)) {
     let templateVars = {
       userId: user,
       userEmail: usersDatabase[user]['email'],
@@ -146,7 +146,7 @@ app.get("/u/:shortUrl", (req, res) => {
 
 //Register Route
 app.get('/register', (req, res) => {
-  if (loggedIn(req)) {
+  if (getUserFromReq(req)) {
     res.redirect('/');
     return;
   }
@@ -155,7 +155,7 @@ app.get('/register', (req, res) => {
 
 //Login Route
 app.get('/login', (req, res) => {
-  if (loggedIn(req)){
+  if (getUserFromReq(req)){
     res.redirect('/');
     return;
   }
@@ -164,8 +164,8 @@ app.get('/login', (req, res) => {
 
 //New short url Route
 app.get("/urls/new", (req, res) => {
-  let user = loggedIn(req);
-  if (loggedIn(req)) {
+  let user = getUserFromReq(req);
+  if (getUserFromReq(req)) {
     let templateVars = {
       userEmail: usersDatabase[user]['email']
     };
@@ -178,14 +178,14 @@ app.get("/urls/new", (req, res) => {
 //Retrieve particular short url (shortUrl) Route
 app.get('/urls/:shortUrl', (req, res) => {
   let shortUrl = req.params.shortUrl;
-  let user = loggedIn(req);
+  let user = getUserFromReq(req);
   if (!urlDatabase.hasOwnProperty(shortUrl)) {
     res.status(404).render('404_error');
     return;
-  } else if (!loggedIn(req)) {
+  } else if (!getUserFromReq(req)) {
     res.status(401).render('401_error');
     return;
-  } else if (loggedIn(req) !== urlDatabase[shortUrl]['userId']) {
+  } else if (getUserFromReq(req) !== urlDatabase[shortUrl]['userId']) {
     res.status(403).render('403_error');
     return;
   }
@@ -260,13 +260,13 @@ app.post('/logout', (req, res) => {
 
 //Create a new short url endpoint
 app.post("/urls", (req, res) => {
-  if (loggedIn(req)) {
+  if (getUserFromReq(req)) {
     let shortUrl = generateRandomString();
 
     //add the basic properties
     urlDatabase[shortUrl] = {};
     urlDatabase[shortUrl]['shortUrl'] = shortUrl;
-    urlDatabase[shortUrl]['website'] = correctUrl(req);
+    urlDatabase[shortUrl]['website'] = correctUrl(req.body.longUrl);
     urlDatabase[shortUrl]['userId'] = req.session['user_id'];
     urlDatabase[shortUrl]['dateCreated'] = new Date().toUTCString();
 
@@ -292,14 +292,14 @@ app.post('/urls/shortUrl', (req, res) => {
   if (!urlDatabase.hasOwnProperty(shortUrl)) {
     res.status(404).render('404_error');
     return;
-  } else if (!loggedIn(req)) {
+  } else if (!getUserFromReq(req)) {
     res.status(401).render('401_error');
     return;
-  } else if (loggedIn(req) !== urlDatabase[shortUrl]['userId']) {
+  } else if (getUserFromReq(req) !== urlDatabase[shortUrl]['userId']) {
     res.status(403).render('403_error');
     return;
   }
-  urlDatabase[shortUrl]['website'] = correctUrl(req);
+  urlDatabase[shortUrl]['website'] = correctUrl(req.body.longUrl);
   urlDatabase[shortUrl]['dateCreated'] = new Date().toUTCString();
   res.redirect(`/urls/${shortUrl}`);
 });
