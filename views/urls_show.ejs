@@ -5,10 +5,10 @@
 </head>
 <body>
   <% include ./partials/_body %>
-  <p><%= 'Short URL: ' %><a href='/u/<%= shortUrl %>'><%= `${shortUrl}` %></a></p>
+  <p><%= 'Short URL: ' %><a href='/u/<%= shortUrl %>'><%= shortUrl %></a></p>
   <p>Created on <%= urlDateCreated %></p>
-  <p>Number of visits: <%= urlNumberOfVisits %></p>
-
+  <p>Number of General Visits: <%= urlNumberOfVisits %></p>
+  <p>Number of Unique Visits: <%= urlNumberOfUniqueVisits %></p>
   <form method='POST' action='/urls/<%= shortUrl %>?_method=PUT'>
     <label for='url-field'>Website</label>
     <input id='url-field' name='longUrl' style="width: 300px" placeholder='<%= longUrl %>'>

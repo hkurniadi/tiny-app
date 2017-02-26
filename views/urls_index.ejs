@@ -9,11 +9,13 @@
     <h2>Your Short URLs: </h2>
     <% userUrls.forEach((url) => { %>
       <ul>
-        <li><a href='/u/<%= url['shortUrl'] %>'><%= `${url['shortUrl']}` %></a><%= ` - ${url['website']}` %></li>
-        <p>Created on <%= url['dateCreated'] %></p>
-        <p>Number of visits: <%= url['visitCount'] %></p>
-        <a href='/urls/<%= url['shortUrl'] %>'>Edit URL</a>
-        <form method='POST' action='/urls/<%= url['shortUrl'] %>?_method=DELETE'>
+        <li><a href="/u/<%= url.shortUrl%>"><%= url.shortUrl %></a><%= " - " %>
+          <a href="/u/<%= url.shortUrl %>"><%= url.website %></a></li>
+        <p>Created on <%= url.dateCreated %></p>
+        <p>Number of General Visits: <%= url.visitCount %></p>
+        <p>Number of Unique Visits: <%= url.visitors.uniqueVisitorCounts %></p>
+        <a href='/urls/<%= url.shortUrl %>'>Edit URL</a>
+        <form method='POST' action='/urls/<%= url.shortUrl %>?_method=DELETE'>
           <input type="submit" value="Delete URL">
         </form>
       </ul>

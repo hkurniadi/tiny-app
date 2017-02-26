@@ -1,10 +1,11 @@
-getUserFromReq//DEPENDANCIES
+//DEPENDANCIES
 const express = require("express");
 const cookieSession = require('cookie-session');
 const bodyParser = require("body-parser");
 const morgan = require('morgan');
 const bcrypt = require('bcrypt');
 const methodOverride = require('method-override');
+const uuidV4 = require('uuid/v4');
 
 const app = express();
 
@@ -25,30 +26,15 @@ app.use(methodOverride('_method'));
 
 //URLs Database
 //should be emptied before submission
-const urlDatabase = { os1iZf:
-   { shortUrl: 'os1iZf',
-     website: 'https://www.lighthouselabs.ca',
-     userId: 'useraXpID1',
-     dateCreated: 'Sun, 26 Feb 2017 02:02:46 GMT',
-     visitCount: 0,
-     visitors: { visitor_id: [], visitorsCount: 0 } } };
+const urlDatabase = {};
 
 //Users Database
-const usersDatabase = { id: 'useraXpID1',
-     email: 'user1@user.com',
-     password: '$2a$10$Vk3Bt6gcsmSD5yc/d8rz3up5g291/wubIGDJqGcBCxq.mYIAyZohW' };
-
+const usersDatabase = {};
 
 //FUNCTION DEFINITIONS
 
 function generateRandomString() {
-  let alphaNum = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  let randomStr = '';
-  //Make a random string of length 6
-  for (let i = 0; i < 6; i++) {
-    let index = Math.floor(Math.random() * alphaNum.length);
-    randomStr += alphaNum[index];
-  }
+  let randomStr = uuidV4().slice(0,6);
   return randomStr;
 }
 
@@ -66,21 +52,11 @@ function getUserFromReq(request) {
   return request.session.user_id;
 };
 
-// function getShortUrl(userId) {
-//   let shortendUrl = [];
-//   for (let shortUrl in urlDatabase) {
-//     if (urlDatabase[shortUrl][userId] === userId ) {
-//       shortendUrl = urlDatabase[shortUrl]['shortUrl'];
-//       return shortendUrl;
-//     }
-//   }
-// }
-
 //To create and return an array that consists of shortURLs specific to a user id
 function urlsForUser(userId) {
   let userUrlsCollection = [];
   for (let shortUrl in urlDatabase) {
-    if (userId === urlDatabase[shortUrl]['userId']) {
+    if (userId === urlDatabase[shortUrl].userId) {
       userUrlsCollection.push(urlDatabase[shortUrl]);
     }
   }
@@ -112,7 +88,7 @@ app.get('/urls', (req, res) => {
   if (getUserFromReq(req)) {
     let templateVars = {
       userId: user,
-      userEmail: usersDatabase[user]['email'],
+      userEmail: usersDatabase[user].email,
       userUrls: urlsForUser(user)
     };
     res.render('urls_index', templateVars);
@@ -124,29 +100,26 @@ app.get('/urls', (req, res) => {
 //Actual site redirection Route
 app.get("/u/:shortUrl", (req, res) => {
   let shortUrl = req.params.shortUrl;
-  if (urlDatabase.hasOwnProperty(shortUrl)) {
-    let actualWebsite = urlDatabase[shortUrl]['website'];
-    res.redirect(actualWebsite);
-    //console.log(urlDatabase[shortUrl]['visitCount']);
+  let userId = getUserFromReq(req);
 
+  if (urlDatabase.hasOwnProperty(shortUrl)) {
+    let actualWebsite = urlDatabase[shortUrl].website;
+    res.redirect(actualWebsite);
     //if the user id cookie who accesses the short url is different than the short url's user id
     //then that means the user is unique visitor id
-    if (req.session['user_id'] !== urlDatabase[shortUrl]['userId']) {
-      if (urlDatabase[shortUrl]['visitors']['visitor_id'].includes(req.session['user_id'])) {
-        urlDatabase[shortUrl]['visitors']['visitorsCount'] += 1;
-        urlDatabase[shortUrl]['visitors']['timestamp'] = new Date();
-        urlDatabase[shortUrl]['visitCount'] += 1;
-        console.log("Unique visitor to this short url site", urlDatabase[shortUrl]['visitors']);
+    let visitors = urlDatabase[shortUrl].visitors;
+    let generalVisitCounts = urlDatabase[shortUrl].visitCounts;
+    if (userId !== urlDatabase[shortUrl].userId) {
+      if (visitors.visitorIds.includes(userId)) {
+        visitors.uniqueVisitorCounts += 1;
+        visitors.lastVisit = new Date();
       } else {
-        urlDatabase[shortUrl]['visitors']['visitor_id'].push(req.session['user_id']);
-        urlDatabase[shortUrl]['visitors']['timestamp'] = new Date();
-        urlDatabase[shortUrl]['visitors']['visitorsCount'] += 1;
-        urlDatabase[shortUrl]['visitCount'] += 1;
-        console.log("Unique visitor to this short url site", urlDatabase[shortUrl]['visitors']);
+        visitors.visitorIds.push(userId.toString());
+        visitors.lastVisit = new Date();
+        visitors.uniqueVisitorCounts += 1;
       }
-    } else {
-      urlDatabase[shortUrl]['visitCount'] += 1;
     }
+    generalVisitCounts += 1;
     return;
   }
   res.status(404).render('404_error');
@@ -176,7 +149,7 @@ app.get("/urls/new", (req, res) => {
   let user = getUserFromReq(req);
   if (getUserFromReq(req)) {
     let templateVars = {
-      userEmail: usersDatabase[user]['email']
+      userEmail: usersDatabase[user].email
     };
     res.render("urls_new", templateVars);
     return;
@@ -194,17 +167,18 @@ app.get('/urls/:shortUrl', (req, res) => {
   } else if (!getUserFromReq(req)) {
     res.status(401).render('401_error');
     return;
-  } else if (getUserFromReq(req) !== urlDatabase[shortUrl]['userId']) {
+  } else if (getUserFromReq(req) !== urlDatabase[shortUrl].userId) {
     res.status(403).render('403_error');
     return;
   }
   let templateVars = {
     userId: user,
-    userEmail: usersDatabase[user]['email'],
+    userEmail: usersDatabase[user].email,
     shortUrl: shortUrl,
-    longUrl: urlDatabase[shortUrl]['website'],
-    urlDateCreated: urlDatabase[shortUrl]['dateCreated'],
-    urlNumberOfVisits: urlDatabase[shortUrl]['visitCount']
+    longUrl: urlDatabase[shortUrl].website,
+    urlDateCreated: urlDatabase[shortUrl].dateCreated,
+    urlNumberOfVisits: urlDatabase[shortUrl].visitCounts,
+    urlNumberOfUniqueVisits: urlDatabase[shortUrl].visitors.uniqueVisitorCounts
   };
   res.status(200).render('urls_show', templateVars);
 });
@@ -213,15 +187,15 @@ app.get('/urls/:shortUrl', (req, res) => {
 
 //Register Route
 app.post('/register', (req, res) => {
-  const password = req.body['password'];
+  const password = req.body.password;
   //Check if email and password are empty
-  if (!req.body['email'] || !password) {
+  if (!req.body.email || !password) {
     res.status(400).send('Please provide email and password');
     return;
   }
   //Check if email already exists in the database
   for (let userId in usersDatabase) {
-    if (usersDatabase[userId]['email'] === req.body['email']) {
+    if (usersDatabase[userId].email === req.body.email) {
       res.status(400).send('Email is already used, please use other email');
       return;
     }
@@ -229,9 +203,10 @@ app.post('/register', (req, res) => {
   //Else, create new user
   let userId = nextUserId();
   const hashed_password = bcrypt.hashSync(password, 10);
+  //Add the new user to the user database
   usersDatabase[userId] = {
     id: userId,
-    email: req.body['email'],
+    email: req.body.email,
     password: hashed_password
   };
   req.session.user_id = userId;
@@ -244,7 +219,7 @@ app.post('/login', (req, res) => {
   let user;
   //Check if credentials are in the database
   for (let userId in usersDatabase) {
-    if (usersDatabase[userId]['email'] === req.body.email) {
+    if (usersDatabase[userId].email === req.body.email) {
       user = usersDatabase[userId];
       break;
     }
@@ -272,23 +247,18 @@ app.post("/urls", (req, res) => {
   if (getUserFromReq(req)) {
     let shortUrl = generateRandomString();
 
-    //add the basic properties
-    urlDatabase[shortUrl] = {};
-    urlDatabase[shortUrl]['shortUrl'] = shortUrl;
-    urlDatabase[shortUrl]['website'] = correctUrl(req.body.longUrl);
-    urlDatabase[shortUrl]['userId'] = req.session['user_id'];
-    urlDatabase[shortUrl]['dateCreated'] = new Date().toUTCString();
-
-    //add the number of visit property to count non-unique visits
-    urlDatabase[shortUrl]['visitCount'] = 0;
-
-    //initialize some of the unique visitor's properties
-    urlDatabase[shortUrl]['visitors'] = {};
-    urlDatabase[shortUrl]['visitors']['visitor_id'] = [];
-    urlDatabase[shortUrl]['visitors']['visitorsCount'] = 0;
-    //console.log("Unique visit", urlDatabase[shortUrl]['visitors']);
-    console.log("Url Database: ", urlDatabase);
-    console.log("User Database: ", usersDatabase);
+    //Add the new short url to the database
+    urlDatabase[shortUrl] = {
+      shortUrl: shortUrl,
+      website: correctUrl(req.body.longUrl),
+      userId: getUserFromReq(req),
+      dateCreated: new Date().toUTCString(),
+      visitCounts: 0,
+      visitors: {
+        visitorIds: [],
+        uniqueVisitorCounts: 0
+      }
+    };
     res.redirect(`/urls/${shortUrl}`);
     return;
   }
@@ -298,18 +268,21 @@ app.post("/urls", (req, res) => {
 //Update short url
 app.put('/urls/:shortUrl', (req, res) => {
   let shortUrl = req.params.shortUrl;
+  let longUrl = req.body.longUrl;
+  let existingEntry = urlDatabase[shortUrl];
   if (!urlDatabase.hasOwnProperty(shortUrl)) {
     res.status(404).render('404_error');
     return;
   } else if (!getUserFromReq(req)) {
     res.status(401).render('401_error');
     return;
-  } else if (getUserFromReq(req) !== urlDatabase[shortUrl]['userId']) {
+  } else if (getUserFromReq(req) !== existingEntry['userId']) {
     res.status(403).render('403_error');
     return;
   }
-  urlDatabase[shortUrl]['website'] = correctUrl(req.body.longUrl);
-  urlDatabase[shortUrl]['dateCreated'] = new Date().toUTCString();
+  //Update the existing entry's properties
+  existingEntry.website = correctUrl(longUrl);
+  existingEntry.dateCreated = new Date().toUTCString();
   res.redirect(`/urls/${shortUrl}`);
 });
 
