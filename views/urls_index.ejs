@@ -4,23 +4,17 @@
   <% include ./partials/_header %>
 </head>
 <body>
-  <% if (user) { %>
+  <% if (userId) { %>
     <% include ./partials/_body %>
     <h2>Your Short URLs: </h2>
     <% userUrls.forEach((url) => { %>
       <ul>
-        <li><%= `${url['shortUrl']} - ${url['website']}` %></li>
+        <li><a href='/u/<%= url['shortUrl'] %>'><%= `${url['shortUrl']}` %></a><%= ` - ${url['website']}` %></li>
         <p>Created on <%= url['dateCreated'] %></p>
         <p>Number of visits: <%= url['visitCount'] %></p>
-
-        <form method='GET' action='/u/<%= url['shortUrl'] %>'>
-          <button>Go to the website</button>
-        </form>
-        <form method='GET' action='/urls/<%= url['shortUrl'] %>'>
-          <button>Edit URL</button>
-        </form>
+        <a href='/urls/<%= url['shortUrl'] %>'>Edit URL</a>
         <form method='POST' action='/urls/<%= url['shortUrl'] %>?_method=DELETE'>
-          <button>Delete URL</button>
+          <input type="submit" value="Delete URL">
         </form>
       </ul>
     <% }); %>
@@ -29,9 +23,7 @@
     </ul>
   <% } else { %>
     <h2>Please login</h2>
-    <form method='GET' action='/login'>
-      <button>Login</button>
-    </form>
+    <a href='/login'><input type="submit" value="Login"></a>
   <% } %>
 </body>
 </html>

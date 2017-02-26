@@ -5,24 +5,20 @@
 </head>
 <body>
   <% include ./partials/_body %>
-  <p><%= `Short URL: ${shortURL}` %></p>
-  <p>Created on <%= urlsDB[shortURL]['dateCreated'] %> </p>
-  <p>Number of visits: <%= urlsDB[shortURL]['visitCount'] %></p>
+  <p><%= 'Short URL: ' %><a href='/u/<%= shortUrl %>'><%= `${shortUrl}` %></a></p>
+  <p>Created on <%= urlDateCreated %></p>
+  <p>Number of visits: <%= urlNumberOfVisits %></p>
 
-  <form method='POST' action='/urls/<%= shortURL %>?_method=PUT'>
+  <form method='POST' action='/urls/<%= shortUrl %>?_method=PUT'>
     <label for='url-field'>Website</label>
-    <input id='url-field' name='longURL' style="width: 300px" placeholder='<%= urlsDB[shortURL]['website'] %>'>
-    <br><button>Update URL</button>
+    <input id='url-field' name='longUrl' style="width: 300px" placeholder='<%= longUrl %>'>
+    <br>
+    <input type="submit" value="Update URL">
   </form>
-  <form method='GET' action='/u/<%= shortURL %>'>
-    <button>Go to the website</button>
-  </form>
-  <form method='POST' action='/urls/<%= shortURL %>?_method=DELETE'>
-    <button>Delete URL</button>
+  <form method='POST' action='/urls/<%= shortUrl %>?_method=DELETE'>
+    <input type="submit" value="Delete URL">
   </form>
   <br>
-  <form method='GET' action='/urls'>
-  <button>Back to Index</button>
-  </form>
+  <a href='/urls'><input type="submit" value="Back to Index"></a>
 </body>
 </html>

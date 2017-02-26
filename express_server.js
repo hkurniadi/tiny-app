@@ -1,4 +1,4 @@
-//DEPENDANCIES
+loggedIn//DEPENDANCIES
 const express = require("express");
 const cookieSession = require('cookie-session');
 const bodyParser = require("body-parser");
@@ -16,9 +16,6 @@ const PORT = process.env.PORT || 8080; // default port 8080
 app.use(cookieSession({
   name: 'session',
   keys: [process.env.SESSION_SECRET || 'development'],
-
-  // Cookie Options
-  maxAge: 24 * 60 * 60 * 1000 // 24 hours
 }));
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(morgan('dev'));
@@ -54,17 +51,27 @@ function nextUserId() {
 };
 
 //To check if user is currently logged in (i.e. 'user_id' cookies exists)
-function loggedInAs(request) {
+function loggedIn(request) {
   //If user is logged in, return the user_id
   //If user is not logged in, return empty/undefined user_id
-  return request.session['user_id'];
+  return request.session.user_id;
 };
 
+// function getShortUrl(userId) {
+//   let shortendUrl = [];
+//   for (let shortUrl in urlDatabase) {
+//     if (urlDatabase[shortUrl][userId] === userId ) {
+//       shortendUrl = urlDatabase[shortUrl]['shortUrl'];
+//       return shortendUrl;
+//     }
+//   }
+// }
+
 //To create and return an array that consists of shortURLs specific to a user id
-function urlsForUser(id) {
+function urlsForUser(userId) {
   let userUrlsCollection = [];
   for (let shortUrl in urlDatabase) {
-    if (id === urlDatabase[shortUrl]['userId']) {
+    if (userId === urlDatabase[shortUrl]['userId']) {
       userUrlsCollection.push(urlDatabase[shortUrl]);
     }
   }
@@ -72,8 +79,8 @@ function urlsForUser(id) {
 };
 
 function correctUrl(request) {
-  if (!request.body.longURL.startsWith('http://') || request.body.longURL.startsWith('https://')) {
-    return `https://${request.body.longURL}`.trim();
+  if (!request.body.longUrl.startsWith('http://') || request.body.longUrl.startsWith('https://')) {
+    return `https://${request.body.longUrl}`.trim();
   }
 };
 
@@ -83,7 +90,7 @@ function correctUrl(request) {
 
 //Root route
 app.get("/", (req, res) => {
-  if (loggedInAs(req)) {
+  if (loggedIn(req)) {
     res.redirect('/urls');
   } else {
     res.redirect('/login');
@@ -92,12 +99,12 @@ app.get("/", (req, res) => {
 
 //Index Page Route
 app.get('/urls', (req, res) => {
-  if (loggedInAs(req)) {
+  let user = loggedIn(req);
+  if (loggedIn(req)) {
     let templateVars = {
-      urlsDB: urlDatabase,
-      usersDB: usersDatabase,
-      user: loggedInAs(req),
-      userUrls: urlsForUser(loggedInAs(req)),
+      userId: user,
+      userEmail: usersDatabase[user]['email'],
+      userUrls: urlsForUser(user)
     };
     res.render('urls_index', templateVars);
     return;
@@ -106,30 +113,30 @@ app.get('/urls', (req, res) => {
 });
 
 //Actual site redirection Route
-app.get("/u/:id", (req, res) => {
-  let readId = req.params.id;
-  if (urlDatabase.hasOwnProperty(readId)) {
-    let actualWebsite = urlDatabase[req.params.id]['website'];
+app.get("/u/:shortUrl", (req, res) => {
+  let shortUrl = req.params.shortUrl;
+  if (urlDatabase.hasOwnProperty(shortUrl)) {
+    let actualWebsite = urlDatabase[shortUrl]['website'];
     res.redirect(actualWebsite);
-    //console.log(urlDatabase[readId]['visitCount']);
+    //console.log(urlDatabase[shortUrl]['visitCount']);
 
     //if the user id cookie who accesses the short url is different than the short url's user id
     //then that means the user is unique visitor id
-    if (req.session['user_id'] !== urlDatabase[readId]['userId']) {
-      if (urlDatabase[readId]['visitors']['visitor_id'].includes(req.session['user_id'])) {
-        urlDatabase[readId]['visitors']['visitorsCount'] += 1;
-        urlDatabase[readId]['visitors']['timestamp'] = new Date();
-        urlDatabase[readId]['visitCount'] += 1;
-        console.log("Unique visitor to this short url site", urlDatabase[readId]['visitors']);
+    if (req.session['user_id'] !== urlDatabase[shortUrl]['userId']) {
+      if (urlDatabase[shortUrl]['visitors']['visitor_id'].includes(req.session['user_id'])) {
+        urlDatabase[shortUrl]['visitors']['visitorsCount'] += 1;
+        urlDatabase[shortUrl]['visitors']['timestamp'] = new Date();
+        urlDatabase[shortUrl]['visitCount'] += 1;
+        console.log("Unique visitor to this short url site", urlDatabase[shortUrl]['visitors']);
       } else {
-        urlDatabase[readId]['visitors']['visitor_id'].push(req.session['user_id']);
-        urlDatabase[readId]['visitors']['timestamp'] = new Date();
-        urlDatabase[readId]['visitors']['visitorsCount'] += 1;
-        urlDatabase[readId]['visitCount'] += 1;
-        console.log("Unique visitor to this short url site", urlDatabase[readId]['visitors']);
+        urlDatabase[shortUrl]['visitors']['visitor_id'].push(req.session['user_id']);
+        urlDatabase[shortUrl]['visitors']['timestamp'] = new Date();
+        urlDatabase[shortUrl]['visitors']['visitorsCount'] += 1;
+        urlDatabase[shortUrl]['visitCount'] += 1;
+        console.log("Unique visitor to this short url site", urlDatabase[shortUrl]['visitors']);
       }
     } else {
-      urlDatabase[readId]['visitCount'] += 1;
+      urlDatabase[shortUrl]['visitCount'] += 1;
     }
     return;
   }
@@ -139,7 +146,7 @@ app.get("/u/:id", (req, res) => {
 
 //Register Route
 app.get('/register', (req, res) => {
-  if (loggedInAs(req)) {
+  if (loggedIn(req)) {
     res.redirect('/');
     return;
   }
@@ -148,7 +155,7 @@ app.get('/register', (req, res) => {
 
 //Login Route
 app.get('/login', (req, res) => {
-  if (loggedInAs(req)){
+  if (loggedIn(req)){
     res.redirect('/');
     return;
   }
@@ -157,31 +164,38 @@ app.get('/login', (req, res) => {
 
 //New short url Route
 app.get("/urls/new", (req, res) => {
-  if (loggedInAs(req)) {
-    res.render("urls_new", { usersDB: usersDatabase, user: loggedInAs(req) });
+  let user = loggedIn(req);
+  if (loggedIn(req)) {
+    let templateVars = {
+      userEmail: usersDatabase[user]['email']
+    };
+    res.render("urls_new", templateVars);
     return;
   }
   res.status(401).render('401_error');
 });
 
-//Retrieve particular short url (:id) Route
-app.get('/urls/:id', (req, res) => {
-  let readId = req.params.id;
-  if (!urlDatabase.hasOwnProperty(readId)) {
+//Retrieve particular short url (shortUrl) Route
+app.get('/urls/:shortUrl', (req, res) => {
+  let shortUrl = req.params.shortUrl;
+  let user = loggedIn(req);
+  if (!urlDatabase.hasOwnProperty(shortUrl)) {
     res.status(404).render('404_error');
     return;
-  } else if (!loggedInAs(req)) {
+  } else if (!loggedIn(req)) {
     res.status(401).render('401_error');
     return;
-  } else if (loggedInAs(req) !== urlDatabase[readId]['userId']) {
+  } else if (loggedIn(req) !== urlDatabase[shortUrl]['userId']) {
     res.status(403).render('403_error');
     return;
   }
   let templateVars = {
-    urlsDB: urlDatabase,
-    usersDB: usersDatabase,
-    shortURL: req.params.id,
-    user: loggedInAs(req),
+    userId: user,
+    userEmail: usersDatabase[user]['email'],
+    shortUrl: shortUrl,
+    longUrl: urlDatabase[shortUrl]['website'],
+    urlDateCreated: urlDatabase[shortUrl]['dateCreated'],
+    urlNumberOfVisits: urlDatabase[shortUrl]['visitCount']
   };
   res.status(200).render('urls_show', templateVars);
 });
@@ -197,8 +211,8 @@ app.post('/register', (req, res) => {
     return;
   }
   //Check if email already exists in the database
-  for (let id in usersDatabase) {
-    if (usersDatabase[id]['email'] === req.body['email']) {
+  for (let userId in usersDatabase) {
+    if (usersDatabase[userId]['email'] === req.body['email']) {
       res.status(400).send('Email is already used, please use other email');
       return;
     }
@@ -217,19 +231,19 @@ app.post('/register', (req, res) => {
 
 //Login Route
 app.post('/login', (req, res) => {
-  const password = req.body['password'];
+  const password = req.body.password;
   let user;
   //Check if credentials are in the database
   for (let userId in usersDatabase) {
-    if (usersDatabase[userId]['email'] === req.body['email']) {
+    if (usersDatabase[userId]['email'] === req.body.email) {
       user = usersDatabase[userId];
       break;
     }
   }
   //Check if password is correct given the email
   if (user) {
-    if (bcrypt.compareSync(password, user['password'])) {
-      req.session.user_id = user['id'];
+    if (bcrypt.compareSync(password, user.password)) {
+      req.session.user_id = user.id;
       res.redirect('/');
       return;
     }
@@ -246,51 +260,52 @@ app.post('/logout', (req, res) => {
 
 //Create a new short url endpoint
 app.post("/urls", (req, res) => {
-  if (loggedInAs(req)) {
-    let shortURL = generateRandomString();
+  if (loggedIn(req)) {
+    let shortUrl = generateRandomString();
 
     //add the basic properties
-    urlDatabase[shortURL] = {};
-    urlDatabase[shortURL]['shortUrl'] = shortURL;
-    urlDatabase[shortURL]['website'] = correctUrl(req);
-    urlDatabase[shortURL]['userId'] = req.session['user_id'];
-    urlDatabase[shortURL]['dateCreated'] = new Date().toUTCString();
+    urlDatabase[shortUrl] = {};
+    urlDatabase[shortUrl]['shortUrl'] = shortUrl;
+    urlDatabase[shortUrl]['website'] = correctUrl(req);
+    urlDatabase[shortUrl]['userId'] = req.session['user_id'];
+    urlDatabase[shortUrl]['dateCreated'] = new Date().toUTCString();
 
     //add the number of visit property to count non-unique visits
-    urlDatabase[shortURL]['visitCount'] = 0;
+    urlDatabase[shortUrl]['visitCount'] = 0;
 
     //initialize some of the unique visitor's properties
-    urlDatabase[shortURL]['visitors'] = {};
-    urlDatabase[shortURL]['visitors']['visitor_id'] = [];
-    urlDatabase[shortURL]['visitors']['visitorsCount'] = 0;
-    //console.log("Unique visit", urlDatabase[shortURL]['visitors']);
-
-    res.redirect(`/urls/${shortURL}`);
+    urlDatabase[shortUrl]['visitors'] = {};
+    urlDatabase[shortUrl]['visitors']['visitor_id'] = [];
+    urlDatabase[shortUrl]['visitors']['visitorsCount'] = 0;
+    //console.log("Unique visit", urlDatabase[shortUrl]['visitors']);
+    console.log("Url Database: ", urlDatabase);
+    console.log("User Database: ", usersDatabase);
+    res.redirect(`/urls/${shortUrl}`);
     return;
   }
   res.status(401).render('401_error');
 });
 
 //Update short url
-app.put('/urls/:id', (req, res) => {
-  let readId = req.params.id;
-  if (!urlDatabase.hasOwnProperty(readId)) {
+app.post('/urls/shortUrl', (req, res) => {
+  let shortUrl = req.params.id;
+  if (!urlDatabase.hasOwnProperty(shortUrl)) {
     res.status(404).render('404_error');
     return;
-  } else if (!loggedInAs(req)) {
+  } else if (!loggedIn(req)) {
     res.status(401).render('401_error');
     return;
-  } else if (loggedInAs(req) !== urlDatabase[readId]['userId']) {
+  } else if (loggedIn(req) !== urlDatabase[shortUrl]['userId']) {
     res.status(403).render('403_error');
     return;
   }
-  urlDatabase[readId]['website'] = correctUrl(req);
-  urlDatabase[readId]['dateCreated'] = new Date().toUTCString();
-  res.redirect(`/urls/${readId}`);
+  urlDatabase[shortUrl]['website'] = correctUrl(req);
+  urlDatabase[shortUrl]['dateCreated'] = new Date().toUTCString();
+  res.redirect(`/urls/${shortUrl}`);
 });
 
 //Delete short url
-app.delete('/urls/:id', (req, res) => {
+app.delete('/urls/shortUrl', (req, res) => {
   delete urlDatabase[req.params.id];
   res.redirect('/urls');
 });
